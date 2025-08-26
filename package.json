@@ -1,11 +1,11 @@
 {
 	"name": "user-services",
 	"module": "/src/server.ts",
-	"type": "module",
+	"type": "commonjs",
 	"scripts": {
 		"dev": "nodemon --config nodemon.json",
 		"build": "tsc -p tsconfig.json",
-		"prestart": "npm run build",
+		"prestart": "bun run build",
 		"start": "node dist/server.js",
 		"clean": "rimraf dist || rm -rf dist"
 	},
