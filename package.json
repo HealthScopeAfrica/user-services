@@ -1,0 +1,49 @@
+{
+	"name": "user-services",
+	"module": "/src/server.ts",
+	"type": "module",
+	"scripts": {
+		"dev": "nodemon --config nodemon.json",
+		"build": "tsc -p tsconfig.json",
+		"prestart": "npm run build",
+		"start": "node dist/server.js",
+		"clean": "rimraf dist || rm -rf dist"
+	},
+	"dependencies": {
+		"bcrypt": "^6.0.0",
+		"compression": "^1.8.1",
+		"cookie-parser": "~1.4.4",
+		"cors": "^2.8.5",
+		"debug": "~2.6.9",
+		"dotenv": "^17.2.1",
+		"ejs": "3.1.10",
+		"express": "5.0.0",
+		"helmet": "^8.1.0",
+		"http-errors": "~1.6.3",
+		"joi": "^18.0.1",
+		"jsonwebtoken": "^9.0.2",
+		"mongoose": "^8.17.1",
+		"morgan": "~1.9.1",
+		"winston": "^3.17.0"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/bcrypt": "^6.0.0",
+		"@types/compression": "^1.8.1",
+		"@types/cookie-parser": "^1.4.9",
+		"@types/cors": "^2.8.19",
+		"@types/debug": "^4.1.12",
+		"@types/ejs": "^3.1.5",
+		"@types/express": "^5.0.3",
+		"@types/helmet": "^0.0.48",
+		"@types/http-errors": "^2.0.5",
+		"@types/jsonwebtoken": "^9.0.10",
+		"@types/morgan": "^1.9.10",
+		"@types/node": "^24.2.1",
+		"nodemon": "^3.1.10",
+		"ts-node": "^10.9.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5.0.0"
+	}
+}
