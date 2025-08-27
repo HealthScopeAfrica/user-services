@@ -4,8 +4,14 @@ import { AccountModel } from "../models/users/account.model";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // TODO: Move to config
 
+// Extend the Express Request type
+
 export interface AuthRequest extends Request {
 	user?: any;
+	file?: Express.Multer.File;
+	files?:
+		| Express.Multer.File[]
+		| { [fieldname: string]: Express.Multer.File[] };
 }
 
 export const authenticate = async (

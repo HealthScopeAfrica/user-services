@@ -37,9 +37,9 @@ app.use(compression());
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Routes
-app.use("/", indexRouter);
-app.use("/auth", authRouter);
-app.use("/users", usersRouter);
+app.use("/api/v1", indexRouter);
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/users", usersRouter);
 
 // 404 handler
 app.use((_req, _res, next) => {
