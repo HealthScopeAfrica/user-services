@@ -10,6 +10,7 @@
 		"clean": "rimraf dist || rm -rf dist"
 	},
 	"dependencies": {
+		"@types/multer": "^2.0.0",
 		"bcrypt": "^6.0.0",
 		"compression": "^1.8.1",
 		"cookie-parser": "~1.4.4",
@@ -24,6 +25,7 @@
 		"jsonwebtoken": "^9.0.2",
 		"mongoose": "^8.17.1",
 		"morgan": "~1.9.1",
+		"multer": "^2.0.2",
 		"winston": "^3.17.0"
 	},
 	"devDependencies": {
