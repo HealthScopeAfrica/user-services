@@ -1,14 +1,51 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { AuthRequest } from "../middlewares/auth.middleware";
 import { AccountModel } from "../models/users/account.model";
 import { ReaderProfileModel } from "../models/users/reader-profile.model";
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret-key"; // TODO: Move to config
+const JWT_SECRET = process.env.JWT_SECRET || "secret-key";
+const REFRESH_TOKEN_SECRET =
+	process.env.REFRESH_TOKEN_SECRET || "refresh-secret-key";
+const ACCESS_TOKEN_EXPIRY = "15m"; // 15 minutes
+const REFRESH_TOKEN_EXPIRY = "7d"; // 7 days
+const MAGIC_LINK_EXPIRY = "15m"; // 15 minutes
+
+interface TokenPayload {
+	userId: string;
+	type?: "access" | "refresh" | "magic";
+	email?: string;
+}
+
+const generateTokens = (userId: string) => {
+	const accessToken = jwt.sign(
+		{ userId, type: "access" } as TokenPayload,
+		JWT_SECRET,
+		{ expiresIn: ACCESS_TOKEN_EXPIRY }
+	);
+	const refreshToken = jwt.sign(
+		{ userId, type: "refresh" } as TokenPayload,
+		REFRESH_TOKEN_SECRET,
+		{ expiresIn: REFRESH_TOKEN_EXPIRY }
+	);
+	return { accessToken, refreshToken };
+};
+
+const generateMagicLink = (email: string) => {
+	const token = jwt.sign(
+		{ email, type: "magic" } as TokenPayload,
+		JWT_SECRET,
+		{ expiresIn: MAGIC_LINK_EXPIRY }
+	);
+	// In production, this should be your frontend URL
+	return `http://localhost:3000/auth/verify-magic-link?token=${token}`;
+};
 
 export const register = async (req: Request, res: Response) => {
 	try {
-		const { email, password, role, username, firstName, lastName } = req.body;
+		const { email, password, username, firstName, lastName } = req.body;
 
 		// check for user
 		const existingUser = await AccountModel.findOne({ email });
@@ -23,25 +60,17 @@ export const register = async (req: Request, res: Response) => {
 		const account = await AccountModel.create({
 			email,
 			passwordHash,
-			role,
+			role: "reader",
 			username,
 			status: "enabled",
 		});
 
-		// Create role-specific profile
-		switch (role) {
-			case "reader":
-				await ReaderProfileModel.create({
-					accountId: account._id,
-					firstName,
-					lastName,
-				});
-				break;
-			// Add cases for other roles in the same format
-			// case 'partner':
-			//   await PartnerProfileModel.create({ accountId: account._id, ...otherStuff });
-			//   break;
-		}
+		// Create reader profile
+		await ReaderProfileModel.create({
+			accountId: account._id,
+			firstName,
+			lastName,
+		});
 
 		// Generate JWT
 		const token = jwt.sign({ userId: account._id }, JWT_SECRET, {
@@ -84,21 +113,31 @@ export const login = async (req: Request, res: Response) => {
 		}
 
 		if (account.status !== "enabled") {
-			return res.status(403).json({ message: "Account is disabled" });
+			return res.status(403).json({ message: "This account is disabled" });
 		}
 
 		// Update last login
 		account.lastLoginAt = new Date();
 		await account.save();
 
-		// Generate JWT
-		const token = jwt.sign({ userId: account._id }, JWT_SECRET, {
-			expiresIn: "24h",
-		});
+		// Generate access and refresh tokens
+		const { accessToken, refreshToken } = generateTokens(
+			account._id.toString()
+		);
+
+		// Store refresh token hash in database
+		const refreshTokenHash = crypto
+			.createHash("sha256")
+			.update(refreshToken)
+			.digest("hex");
+		account.refreshTokens = account.refreshTokens || [];
+		account.refreshTokens.push(refreshTokenHash);
+		await account.save();
 
 		res.json({
 			message: "Login successful",
-			token,
+			accessToken,
+			refreshToken,
 			user: {
 				id: account._id,
 				email: account.email,
@@ -109,5 +148,222 @@ export const login = async (req: Request, res: Response) => {
 	} catch (error) {
 		console.error("Login error:", error);
 		res.status(500).json({ message: "Error during login" });
+	}
+};
+
+export const logout = async (req: AuthRequest, res: Response) => {
+	try {
+		const refreshToken = req.body.refreshToken;
+		if (!refreshToken) {
+			return res.status(400).json({ message: "Refresh token required" });
+		}
+
+		// Remove refresh token from database
+		const refreshTokenHash = crypto
+			.createHash("sha256")
+			.update(refreshToken)
+			.digest("hex");
+		await AccountModel.updateOne(
+			{ _id: req.user?.userId },
+			{ $pull: { refreshTokens: refreshTokenHash } }
+		);
+
+		res.json({ message: "Logged out successfully" });
+	} catch (error) {
+		console.error("Logout error:", error);
+		res.status(500).json({ message: "Error during logout" });
+	}
+};
+
+export const refreshToken = async (req: Request, res: Response) => {
+	try {
+		const { refreshToken } = req.body;
+		if (!refreshToken) {
+			return res.status(400).json({ message: "Refresh token required" });
+		}
+
+		// Verify refresh token
+		const payload = jwt.verify(
+			refreshToken,
+			REFRESH_TOKEN_SECRET
+		) as TokenPayload;
+		if (payload.type !== "refresh") {
+			return res.status(401).json({ message: "Invalid refresh token" });
+		}
+
+		// Check if refresh token is in database
+		const refreshTokenHash = crypto
+			.createHash("sha256")
+			.update(refreshToken)
+			.digest("hex");
+		const account = await AccountModel.findOne({
+			_id: payload.userId,
+			refreshTokens: refreshTokenHash,
+		});
+
+		if (!account) {
+			return res.status(401).json({ message: "Invalid refresh token" });
+		}
+
+		// Generate new access token
+		const accessToken = jwt.sign(
+			{ userId: account._id, type: "access" } as TokenPayload,
+			JWT_SECRET,
+			{
+				expiresIn: ACCESS_TOKEN_EXPIRY,
+			}
+		);
+
+		res.json({ accessToken });
+	} catch (error) {
+		console.error("Refresh token error:", error);
+		res.status(401).json({ message: "Invalid refresh token" });
+	}
+};
+
+export const sendMagicLink = async (req: Request, res: Response) => {
+	try {
+		const { email } = req.body;
+		const account = await AccountModel.findOne({ email });
+
+		if (!account) {
+			return res.status(404).json({ message: "Account not found" });
+		}
+
+		const magicLink = generateMagicLink(email);
+		// TODO: Send magic link via email service
+		// For development, we'll just return it
+		res.json({
+			message: "Magic link sent successfully",
+			magicLink, // Remove this in production
+		});
+	} catch (error) {
+		console.error("Magic link error:", error);
+		res.status(500).json({ message: "Error sending magic link" });
+	}
+};
+
+export const verifyMagicLink = async (req: Request, res: Response) => {
+	try {
+		const { token } = req.query;
+		if (!token || typeof token !== "string") {
+			return res.status(400).json({ message: "Token required" });
+		}
+
+		const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+		if (payload.type !== "magic" || !payload.email) {
+			return res.status(401).json({ message: "Invalid magic link" });
+		}
+
+		const account = await AccountModel.findOne({ email: payload.email });
+		if (!account) {
+			return res.status(404).json({ message: "Account not found" });
+		}
+
+		// Generate new tokens
+		const { accessToken, refreshToken } = generateTokens(
+			account._id.toString()
+		);
+
+		// Store refresh token
+		const refreshTokenHash = crypto
+			.createHash("sha256")
+			.update(refreshToken)
+			.digest("hex");
+		account.refreshTokens = account.refreshTokens || [];
+		account.refreshTokens.push(refreshTokenHash);
+		await account.save();
+
+		res.json({
+			message: "Magic link verified",
+			accessToken,
+			refreshToken,
+			user: {
+				id: account._id,
+				email: account.email,
+				role: account.role,
+				username: account.username,
+			},
+		});
+	} catch (error) {
+		console.error("Magic link verification error:", error);
+		res.status(401).json({ message: "Invalid magic link" });
+	}
+};
+
+export const updateProfile = async (req: AuthRequest, res: Response) => {
+	try {
+		const userId = req.user?.userId;
+		const { firstName, lastName, ...otherDetails } = req.body;
+		const profilePicture = req.file?.path; // Assuming you're using multer for file uploads
+
+		const account = await AccountModel.findById(userId);
+		if (!account) {
+			return res.status(404).json({ message: "Account not found" });
+		}
+
+		const profile = await ReaderProfileModel.findOneAndUpdate(
+			{ accountId: userId },
+			{
+				firstName,
+				lastName,
+				...(profilePicture && { profilePicture }),
+				...otherDetails,
+			},
+			{ new: true }
+		);
+
+		res.json({ message: "Profile updated successfully", profile });
+	} catch (error) {
+		console.error("Profile update error:", error);
+		res.status(500).json({ message: "Error updating profile" });
+	}
+};
+
+export const updateProfilePicture = async (req: AuthRequest, res: Response) => {
+	try {
+		const userId = req.user?.userId;
+		const profilePicture = req.file?.path;
+
+		if (!profilePicture) {
+			return res.status(400).json({ message: "Profile picture required" });
+		}
+
+		const account = await AccountModel.findById(userId);
+		if (!account) {
+			return res.status(404).json({ message: "Account not found" });
+		}
+
+		const profile = await ReaderProfileModel.findOneAndUpdate(
+			{ accountId: userId },
+			{ profilePicture },
+			{ new: true }
+		);
+
+		res.json({ message: "Profile picture updated successfully", profile });
+	} catch (error) {
+		console.error("Profile picture update error:", error);
+		res.status(500).json({ message: "Error updating profile picture" });
+	}
+};
+
+export const deleteProfile = async (req: AuthRequest, res: Response) => {
+	try {
+		const userId = req.user?.userId;
+
+		const account = await AccountModel.findById(userId);
+		if (!account) {
+			return res.status(404).json({ message: "Account not found" });
+		}
+
+		await ReaderProfileModel.deleteOne({ accountId: userId });
+
+		// Delete account
+		await AccountModel.deleteOne({ _id: userId });
+
+		res.json({ message: "Profile deleted successfully" });
+	} catch (error) {
+		console.error("Profile deletion error:", error);
+		res.status(500).json({ message: "Error deleting profile" });
 	}
 };

@@ -4,7 +4,7 @@ const router = Router();
 
 /* GET users listing. */
 router.get("/", (_req: Request, res: Response) => {
-	res.send("Healthscope User Resources");
+	res.send("Welcome to HealthScope Dear Reader");
 });
 
 export default router;

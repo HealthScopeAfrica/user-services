@@ -1,8 +1,15 @@
-import express from 'express';
-import { register, login } from "../controllers/auth.controller";
-import { authenticate, authorize, AuthRequest } from '../middlewares/auth.middleware';
+import express from "express";
+import {
+	login,
+	logout,
+	refreshToken,
+	register,
+	sendMagicLink,
+	verifyMagicLink,
+} from "../controllers/auth.controller";
+import { authenticate } from "../middlewares/auth.middleware";
 import { validateRequest } from "../middlewares/validation.middleware";
-import { registerSchema, loginSchema } from "../validators/auth.validator";
+import { loginSchema, registerSchema } from "../validators/auth.validator";
 
 /**
  * Routes that implement or require a form of
@@ -12,18 +19,18 @@ import { registerSchema, loginSchema } from "../validators/auth.validator";
  */
 const router = express.Router();
 
-// Auth routes
-router.post("/register", validateRequest(registerSchema), register);
+router.get("/", (req, res) => {
+	res.send("Healthscope Reader Authentication/Authorization Resources");
+});
+
+// Authentication routes
 router.post("/login", validateRequest(loginSchema), login);
+router.post("/register", validateRequest(registerSchema), register);
+router.post("/refresh-token", refreshToken);
+router.post("/logout", authenticate, logout);
 
-// Protected route example
-router.get('/me', authenticate, (req: AuthRequest, res) => {
-  res.json({ user: req.user });
-});
-
-// Role-specific route example
-router.get('/admin-only', authenticate, authorize('admin'), (req, res) => {
-  res.json({ message: 'Admin access granted' });
-});
+// Magic link authentication to add to postman later
+router.post("/magic-link", sendMagicLink);
+router.get("/verify-magic-link", verifyMagicLink);
 
 export default router;
