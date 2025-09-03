@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { AuthRequest } from "../middlewares/auth.middleware";
 import { AccountModel } from "../models/users/account.model";
 import { ReaderProfileModel } from "../models/users/reader-profile.model";
+import { sendMail } from "../lib/mailer";
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret-key";
 const REFRESH_TOKEN_SECRET =
@@ -17,6 +18,7 @@ interface TokenPayload {
 	userId: string;
 	type?: "access" | "refresh" | "magic";
 	email?: string;
+	action: "login" | "signup";
 }
 
 const generateTokens = (userId: string) => {
@@ -33,9 +35,9 @@ const generateTokens = (userId: string) => {
 	return { accessToken, refreshToken };
 };
 
-const generateMagicLink = (email: string) => {
+const generateMagicLink = (email: string, action: "login" | "signup") => {
 	const token = jwt.sign(
-		{ email, type: "magic" } as TokenPayload,
+		{ email, type: "magic", action } as TokenPayload,
 		JWT_SECRET,
 		{ expiresIn: MAGIC_LINK_EXPIRY }
 	);
@@ -60,7 +62,7 @@ export const register = async (req: Request, res: Response) => {
 		const account = await AccountModel.create({
 			email,
 			passwordHash,
-			role: "reader",
+			// role: "reader",
 			username,
 			status: "enabled",
 		});
@@ -83,7 +85,7 @@ export const register = async (req: Request, res: Response) => {
 			user: {
 				id: account._id,
 				email: account.email,
-				role: account.role,
+				// role: account.role,
 				username: account.username,
 			},
 		});
@@ -224,19 +226,39 @@ export const refreshToken = async (req: Request, res: Response) => {
 export const sendMagicLink = async (req: Request, res: Response) => {
 	try {
 		const { email } = req.body;
-		const account = await AccountModel.findOne({ email });
+		let account = await AccountModel.findOne({ email });
+
+		let action: "login" | "signup" = "login";
 
 		if (!account) {
-			return res.status(404).json({ message: "Account not found" });
+			// auto-create account for signup
+			account = new AccountModel({ email });
+			await account.save();
+			action = "signup";
 		}
 
-		const magicLink = generateMagicLink(email);
-		// TODO: Send magic link via email service
-		// For development, we'll just return it
-		res.json({
-			message: "Magic link sent successfully",
-			magicLink, // Remove this in production
-		});
+		const magicLink = generateMagicLink(email, action);
+		const subject =
+			action === "signup"
+				? "Welcome to HealthScope! Confirm your signup"
+				: "HealthScope Magic Login Link";
+
+		try {
+			await sendMail({
+				to: email,
+				subject,
+				text: `Here is your healthscope magic link, it expires in 10 minutes:\n${magicLink}`,
+				html: `<p>Click below to continue:</p><p><a href="${magicLink}">${magicLink}</a></p>`,
+			});
+
+			res.json({
+				success: true,
+				msg: `Magic link sent for ${action}`,
+			});
+		} catch (error) {
+			console.error("Email error:", error);
+			res.status(500).json({ success: false, msg: "Failed to send email" });
+		}
 	} catch (error) {
 		console.error("Magic link error:", error);
 		res.status(500).json({ message: "Error sending magic link" });
@@ -291,3 +313,38 @@ export const verifyMagicLink = async (req: Request, res: Response) => {
 	}
 };
 
+/**
+ * Use after user signs up with magic link where there was no inital password set up
+ */
+export const setPassword = async (req: AuthRequest, res: Response) => {
+	try {
+		const { password } = req.body;
+
+		// Validation
+		if (!password || password.length < 8) {
+			return res.status(400).json({
+				message: "Password must be at least 8 characters long",
+			});
+		}
+
+		// Ensure user is attached by middleware
+		const account = req.user;
+		if (!account) {
+			return res.status(401).json({ message: "Unauthorized" });
+		}
+
+		// Hash password
+		const salt = await bcrypt.genSalt(10);
+		account.password = await bcrypt.hash(password, salt);
+
+		await account.save();
+
+		return res.json({
+			success: true,
+			message: "Password set successfully",
+		});
+	} catch (error) {
+		console.error("Set password error:", error);
+		return res.status(500).json({ message: "Error setting password" });
+	}
+};

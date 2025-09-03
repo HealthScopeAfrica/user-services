@@ -5,6 +5,7 @@ import {
 	refreshToken,
 	register,
 	sendMagicLink,
+	setPassword,
 	verifyMagicLink,
 } from "../controllers/auth.controller";
 import { authenticate } from "../middlewares/auth.middleware";
@@ -32,5 +33,6 @@ router.post("/logout", authenticate, logout);
 // Magic link authentication to add to postman later
 router.post("/magic-link", sendMagicLink);
 router.get("/verify-magic-link", verifyMagicLink);
+router.post("/set-password", authenticate, setPassword);
 
 export default router;
