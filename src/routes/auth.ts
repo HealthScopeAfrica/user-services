@@ -24,8 +24,8 @@ router.get("/", (req, res) => {
 });
 
 // Authentication routes
-router.post("/login", validateRequest(loginSchema), login);
 router.post("/register", validateRequest(registerSchema), register);
+router.post("/login", validateRequest(loginSchema), login);
 router.post("/refresh-token", refreshToken);
 router.post("/logout", authenticate, logout);
 

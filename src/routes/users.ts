@@ -3,7 +3,7 @@ import {
 	deleteProfile,
 	updateProfile,
 	updateProfilePicture,
-} from "../controllers/auth.controller";
+} from "../controllers/user.controller";
 import { authenticate, AuthRequest } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
