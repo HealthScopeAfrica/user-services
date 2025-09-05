@@ -19,7 +19,6 @@ const AccountSchema = new Schema(
 
 		// We keep email for dedupe + linking across methods (normalize to lowercase).
 		email: { type: String, required: true },
-		username: { type: String }, // Readers can set usernames later, but it's optional
 		// passwordHash is optional so accounts can be created via magic link without a password
 		passwordHash: { type: String, default: null },
 
@@ -49,7 +48,6 @@ AccountSchema.index(
 // Normalize email and username case before saving
 AccountSchema.pre("save", function (next) {
 	if (this.email) this.email = this.email.trim().toLowerCase();
-	if (this.username) this.username = this.username.trim().toLowerCase();
 	next();
 });
 

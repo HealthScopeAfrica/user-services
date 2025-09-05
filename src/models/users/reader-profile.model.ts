@@ -8,6 +8,8 @@ const ReaderProfileSchema = new Schema(
 			required: true,
 		},
 
+		username: { type: String }, // Readers can set usernames later, but it's optional
+
 		firstName: String,
 		lastName: String,
 		// preferences / interests can be added later
@@ -32,6 +34,12 @@ const ReaderProfileSchema = new Schema(
 );
 
 ReaderProfileSchema.index({ accountId: 1 }, { unique: true }); // unique index on accountId to ensure one profile per account
+
+// Normalize username case before saving
+ReaderProfileSchema.pre("save", function (next) {
+	if (this.username) this.username = this.username.trim().toLowerCase();
+	next();
+});
 
 export type ReaderProfile = InferSchemaType<typeof ReaderProfileSchema>;
 export const ReaderProfileModel =

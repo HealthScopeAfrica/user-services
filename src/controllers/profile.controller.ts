@@ -3,7 +3,6 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import { AccountModel } from "../models/users/account.model";
 import { ReaderProfileModel } from "../models/users/reader-profile.model";
 
-
 export const getProfile = async (req: AuthRequest, res: Response) => {
 	try {
 		const userId = req.user?._id;
@@ -49,13 +48,12 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 		console.error("Profile retrieval error:", error);
 		res.status(500).json({ message: "Error retrieving profile" });
 	}
-
 };
-
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
 	try {
-		const userId = req.user?.userId;
+		const userId = req.user?._id;
+
 		const { firstName, lastName, ...otherDetails } = req.body;
 		const profilePicture = req.file?.path; // Assuming you're using multer for file uploads
 
@@ -84,7 +82,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
 
 export const updateProfilePicture = async (req: AuthRequest, res: Response) => {
 	try {
-		const userId = req.user?.userId;
+		const userId = req.user?._id;
 		const profilePicture = req.file?.path;
 
 		if (!profilePicture) {
@@ -102,7 +100,10 @@ export const updateProfilePicture = async (req: AuthRequest, res: Response) => {
 			{ new: true }
 		);
 
-		res.json({ message: "Profile picture updated successfully", profile });
+		res.json({
+			message: "Profile picture updated successfully",
+			profilePicture: profile.profilePicture,
+		});
 	} catch (error) {
 		console.error("Profile picture update error:", error);
 		res.status(500).json({ message: "Error updating profile picture" });
@@ -111,7 +112,7 @@ export const updateProfilePicture = async (req: AuthRequest, res: Response) => {
 
 export const deleteProfile = async (req: AuthRequest, res: Response) => {
 	try {
-		const userId = req.user?.userId;
+		const userId = req.user?._id;
 
 		const account = await AccountModel.findById(userId);
 		if (!account) {
@@ -120,7 +121,7 @@ export const deleteProfile = async (req: AuthRequest, res: Response) => {
 
 		await ReaderProfileModel.deleteOne({ accountId: userId });
 
-		// Delete account
+		// Delete account unless you want to be naughty and keep user data 😏
 		await AccountModel.deleteOne({ _id: userId });
 
 		res.json({ message: "Profile deleted successfully" });

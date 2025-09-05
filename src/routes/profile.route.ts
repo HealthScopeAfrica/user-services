@@ -4,7 +4,7 @@ import {
 	getProfile,
 	updateProfile,
 	updateProfilePicture,
-} from "../controllers/user.controller";
+} from "../controllers/profile.controller";
 import { authenticate, AuthRequest } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/upload.middleware";
 
@@ -14,21 +14,21 @@ router.get("/", (_req: Request, res: Response) => {
 	res.send("HealthScope User Resources");
 });
 
-router.get("/profile", authenticate, getProfile);
+router.get("/me", authenticate, getProfile);
 
 // Profile management
 router.put(
-	"/profile",
+	"/",
 	authenticate,
 	upload.single("profilePicture"),
 	updateProfile
 );
 router.put(
-	"/profile/picture",
+	"/picture",
 	authenticate,
 	upload.single("profilePicture"),
 	updateProfilePicture
 );
-router.delete("/profile", authenticate, deleteProfile);
+router.delete("/", authenticate, deleteProfile);
 
 export default router;
