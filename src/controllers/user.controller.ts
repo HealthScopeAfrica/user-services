@@ -4,6 +4,10 @@ import { AccountModel } from "../models/users/account.model";
 import { ReaderProfileModel } from "../models/users/reader-profile.model";
 
 
+export const getProfile = async (req: AuthRequest, res: Response) => {
+	res.json({ user: req.user });
+};
+
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
 	try {

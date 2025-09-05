@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import {
 	deleteProfile,
+	getProfile,
 	updateProfile,
 	updateProfilePicture,
 } from "../controllers/user.controller";
@@ -9,14 +10,11 @@ import { upload } from "../middlewares/upload.middleware";
 
 const router = Router();
 
-/* GET users listing. */
 router.get("/", (_req: Request, res: Response) => {
 	res.send("HealthScope User Resources");
 });
 
-router.get("/me", authenticate, (req: AuthRequest, res) => {
-	res.json({ user: req.user });
-});
+router.get("/profile", authenticate, getProfile);
 
 // Profile management
 router.put(

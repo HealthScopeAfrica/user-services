@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AccountModel } from "../models/users/account.model";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // TODO: Move to config
+const JWT_SECRET = process.env.JWT_SECRET || "secret-key"; // TODO: Move to config
 
 // Extend the Express Request type
 
@@ -20,7 +20,12 @@ export const authenticate = async (
 	next: NextFunction
 ) => {
 	try {
-		const token = req.headers.authorization?.split(" ")[1];
+		const authHeader = req.headers.authorization;
+		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+			return res.status(401).json({ message: "Bearer token required" });
+		}
+
+		const token = authHeader.split(" ")[1];
 
 		if (!token) {
 			return res.status(401).json({ message: "Authentication required" });
