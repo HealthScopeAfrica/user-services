@@ -10,7 +10,7 @@ import { sendMail } from "../lib/mailer";
 const JWT_SECRET = process.env.JWT_SECRET || "secret-key";
 const REFRESH_TOKEN_SECRET =
 	process.env.REFRESH_TOKEN_SECRET || "refresh-secret-key";
-const ACCESS_TOKEN_EXPIRY = "15m"; // 15 minutes
+const ACCESS_TOKEN_EXPIRY = "7d"; //should be 15 minutes 15m
 const REFRESH_TOKEN_EXPIRY = "7d"; // 7 days
 const MAGIC_LINK_EXPIRY = "10m"; // 10 minutes
 

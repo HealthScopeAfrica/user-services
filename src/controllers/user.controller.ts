@@ -5,7 +5,51 @@ import { ReaderProfileModel } from "../models/users/reader-profile.model";
 
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
-	res.json({ user: req.user });
+	try {
+		const userId = req.user?._id;
+
+		const account = await AccountModel.findById(userId).select(
+			"-passwordHash -__v"
+		);
+		if (!account) {
+			return res.status(404).json({ message: "Account not found" });
+		}
+
+		const profile = await ReaderProfileModel.findOne({
+			accountId: userId,
+		}).select("-__v");
+		if (!profile) {
+			return res.status(404).json({ message: "Profile not found" });
+		}
+
+		// Convert mongoose docs to plain JS objects
+		const accountObj = account.toObject();
+		const profileObj = profile.toObject();
+
+		// Merge while keeping only the useful fields
+		const merged = {
+			email: accountObj.email,
+			username: accountObj.username,
+			role: accountObj.role,
+			status: accountObj.status,
+			profilePicture: profileObj.profilePicture,
+			profileCompleted: accountObj.profileCompleted,
+			createdAt: accountObj.createdAt,
+			lastLoginAt: accountObj.lastLoginAt,
+			firstName: profileObj.firstName,
+			lastName: profileObj.lastName,
+			allergies: profileObj.allergies,
+			conditions: profileObj.conditions,
+			medications: profileObj.medications,
+			emergencyContacts: profileObj.emergencyContacts,
+		};
+
+		res.json(merged);
+	} catch (error) {
+		console.error("Profile retrieval error:", error);
+		res.status(500).json({ message: "Error retrieving profile" });
+	}
+
 };
 
 

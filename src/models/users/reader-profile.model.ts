@@ -11,6 +11,7 @@ const ReaderProfileSchema = new Schema(
 		firstName: String,
 		lastName: String,
 		// preferences / interests can be added later
+		profilePicture: String,
 		dateOfBirth: Date,
 		gender: String,
 		phone: String,
