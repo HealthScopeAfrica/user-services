@@ -8,10 +8,24 @@ const ReaderProfileSchema = new Schema(
 			required: true,
 		},
 
-		// everything below is optional and can be added anytime
 		firstName: String,
 		lastName: String,
 		// preferences / interests can be added later
+		dateOfBirth: Date,
+		gender: String,
+		phone: String,
+		address: String,
+		bloodGroup: String,
+		allergies: [String],
+		conditions: [String],
+		medications: [String],
+		emergencyContacts: [
+			{
+				name: String,
+				relation: String,
+				phone: String,
+			},
+		],
 	},
 	{ timestamps: true, versionKey: false }
 );

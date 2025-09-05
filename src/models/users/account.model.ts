@@ -1,6 +1,6 @@
 import { Schema, model, models, InferSchemaType } from "mongoose";
 
-// const ROLES = ["reader"] as const;
+const ROLES = ["reader"] as const;
 
 const SocialSchema = new Schema(
 	{
@@ -15,7 +15,7 @@ const SocialSchema = new Schema(
 
 const AccountSchema = new Schema(
 	{
-		// role: { type: String, enum: ROLES, required: true, index: true },
+		role: { type: String, enum: ROLES, required: true, index: true },
 
 		// We keep email for dedupe + linking across methods (normalize to lowercase).
 		email: { type: String, required: true },
@@ -25,6 +25,7 @@ const AccountSchema = new Schema(
 
 		// Social/OAuth connections (Clerk/Okta/Google/etc.)
 		socials: { type: [SocialSchema], default: [] },
+		profileCompleted: { type: Boolean, default: false },
 
 		status: {
 			type: String,

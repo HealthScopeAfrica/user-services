@@ -62,7 +62,7 @@ export const register = async (req: Request, res: Response) => {
 		const account = await AccountModel.create({
 			email,
 			passwordHash,
-			// role: "reader",
+			role: "reader",
 			username,
 			status: "enabled",
 		});
@@ -85,7 +85,7 @@ export const register = async (req: Request, res: Response) => {
 			user: {
 				id: account._id,
 				email: account.email,
-				// role: account.role,
+				role: account.role,
 				username: account.username,
 			},
 		});
