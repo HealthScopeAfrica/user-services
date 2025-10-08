@@ -29,6 +29,8 @@ const ReaderProfileSchema = new Schema(
 				phone: String,
 			},
 		],
+		interests: [String],
+		favourites: [{ type: Schema.Types.ObjectId, ref: "Article" }],
 	},
 	{ timestamps: true, versionKey: false }
 );

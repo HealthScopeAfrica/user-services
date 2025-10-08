@@ -232,7 +232,7 @@ export const sendMagicLink = async (req: Request, res: Response) => {
 
 		if (!account) {
 			// auto-create account for signup
-			account = new AccountModel({ email });
+			account = new AccountModel({ email, role: "reader" });
 			await account.save();
 			action = "signup";
 		}
@@ -247,8 +247,11 @@ export const sendMagicLink = async (req: Request, res: Response) => {
 			await sendMail({
 				to: email,
 				subject,
-				text: `Here is your healthscope magic link, it expires in 10 minutes:\n${magicLink}`,
-				html: `<p>Click below to continue:</p><p><a href="${magicLink}">${magicLink}</a></p>`,
+				html: `<div>
+				<h2>Here is your healthscope magic link, it expires in 10 minutes</h2>
+				<p>Click below to continue:</p><p><a href="${magicLink}">${magicLink}</a></p>
+				</div>
+				`,
 			});
 
 			res.json({

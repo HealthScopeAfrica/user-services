@@ -2,10 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AccountModel } from "../models/users/account.model";
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret-key"; // TODO: Move to config
+const JWT_SECRET = process.env.JWT_SECRET || "secret-key";
 
-// Extend the Express Request type
-
+// Use your existing AuthRequest interface
 export interface AuthRequest extends Request {
 	user?: any;
 	file?: Express.Multer.File;
@@ -14,6 +13,7 @@ export interface AuthRequest extends Request {
 		| { [fieldname: string]: Express.Multer.File[] };
 }
 
+// Your existing authenticate middleware (keeping as-is)
 export const authenticate = async (
 	req: AuthRequest,
 	res: Response,
@@ -47,6 +47,7 @@ export const authenticate = async (
 	}
 };
 
+// Your existing authorize middleware (keeping as-is)
 export const authorize = (...roles: string[]) => {
 	return (req: AuthRequest, res: Response, next: NextFunction) => {
 		if (!req.user) {
@@ -59,4 +60,34 @@ export const authorize = (...roles: string[]) => {
 
 		next();
 	};
+};
+
+// NEW: Optional authentication for public+private endpoints
+export const optionalAuth = async (
+	req: AuthRequest,
+	res: Response,
+	next: NextFunction
+) => {
+	try {
+		const authHeader = req.headers.authorization;
+
+		if (authHeader && authHeader.startsWith("Bearer ")) {
+			const token = authHeader.split(" ")[1];
+
+			if (token) {
+				const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+				const user = await AccountModel.findById(decoded.userId);
+
+				if (user && user.status === "enabled") {
+					req.user = user;
+				}
+			}
+		}
+
+		// Continue regardless of auth status
+		next();
+	} catch (error) {
+		// If token is invalid, just continue without user
+		next();
+	}
 };
