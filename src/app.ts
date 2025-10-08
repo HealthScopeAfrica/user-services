@@ -1,17 +1,20 @@
-import "dotenv/config";
-import express, { NextFunction, Request, Response } from "express";
-import path from "path";
-import cookieParser from "cookie-parser";
-import logger from "morgan";
-import createError, { HttpError } from "http-errors";
-import cors from "cors";
-import helmet from "helmet";
 import compression from "compression";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import "dotenv/config";
+import express from "express";
+import helmet from "helmet";
+import createError from "http-errors";
+import logger from "morgan";
+import path from "path";
+import connectDB from "./config/db";
 import errorHandler from "./middlewares/errorHandler";
-import connectDB from './config/db';
 
-import indexRouter from "./routes/index";
+import { validateSearch } from "./middlewares/query-validator";
+import rateLimiter from "./middlewares/rate-limiter";
+import articleRouter from "./routes/articles.route";
 import authRouter from "./routes/auth.route";
+import indexRouter from "./routes/index";
 import profileRouter from "./routes/profile.route";
 
 const app = express();
@@ -35,11 +38,13 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(compression());
 app.use(express.static(path.join(__dirname, "..", "public")));
+app.use(rateLimiter);
 
 // Routes
 app.use("/api/v1", indexRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/profile", profileRouter);
+app.use("/api/v1/articles", validateSearch, articleRouter);
 
 // 404 handler
 app.use((_req, _res, next) => {
@@ -65,7 +70,5 @@ app.use(errorHandler);
 // 		});
 // 	}
 // });
-
-
 
 export default app;

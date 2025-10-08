@@ -71,12 +71,12 @@ class ArticleService {
 
 		if (!article) return null;
 
-		// Check if article is in user's favourites
+		// // Check if article is in user's favourites
 		// if (userId) {
 		// 	const user = await ReaderProfileModel.findById(userId).select(
 		// 		"favourites"
 		// 	);
-		// 	// article.isFavourited = user?.favourites?.includes(id) || false;
+		// 	article.isFavourited = user?.favourites?.includes(id) || false;
 		// }
 
 		return article;

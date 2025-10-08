@@ -31,6 +31,11 @@ const ReaderProfileSchema = new Schema(
 		],
 		interests: [String],
 		favourites: [{ type: Schema.Types.ObjectId, ref: "Article" }],
+
+		// 		favourites: mongoose.Types.ObjectId[]; // Array of article IDs
+		//   readingHistory: mongoose.Types.ObjectId[]; // Track read articles
+		//   interests: string[]; // User interests for recommendations
+		//   lastActive: Date;
 	},
 	{ timestamps: true, versionKey: false }
 );
